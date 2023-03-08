@@ -93,47 +93,12 @@ fn app() -> Result<(), String> {
             .expect("We created it, we expect 4 len always")
             .is_uppercase();
         println!(
-            "\nChunk {chunk_type} ({}) of size {size} at address 0x{:0>2x}",
+            "Chunk {chunk_type} ({}) of size {size} at address 0x{:0>2x}",
             if critical { "Critical" } else { "Ancillary" },
             iterator.get_address()
         );
         // Skip chunk size
-        let data_bytes = iterator.next_slice_of(size as usize, "Chunk Data")?;
-
-        if critical && chunk_type == "IDAT" {
-            let mut data_iterator = ContentIter::new(&data_bytes);
-            let is_last = data_iterator.next_bit("IS_LAST")?;
-            let block_type = data_iterator.next_bit_slice_of(2, "BTYPE")?;
-
-            println!("           IS_LAST: {:b}", is_last);
-            println!(
-                "             BTYPE: {}",
-                block_type
-                    .iter()
-                    .map(|v| format!("{v:b}"))
-                    .collect::<Vec<_>>()
-                    .join("")
-            );
-
-            if block_type == &[0, 0] {
-                let padding = data_iterator.skip_remaining_bits()?;
-
-                if padding.iter().sum::<u8>() != 0 {
-                    return Err(format!(
-                        "Non zero padding {}",
-                        padding
-                            .into_iter()
-                            .map(|v| format!("{v}"))
-                            .collect::<Vec<_>>()
-                            .join("")
-                    ));
-                }
-
-                let len = data_iterator.read_u16_be("DEFLATE Block Lenght")?;
-
-                println!("Len: {len:b}");
-            }
-        }
+        iterator.next_slice_of(size as usize, "Chunk Data")?;
 
         // Skip chunk CRC
         iterator.next_slice_of(4, "Chunk CRC")?;
